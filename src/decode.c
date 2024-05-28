@@ -778,6 +778,9 @@ const char *PktSrcToString(enum PktSrcEnum pkt_src)
             break;
         case PKT_SRC_SHUTDOWN_FLUSH:
             pkt_src_str = "shutdown flush";
+		case PKT_SRC_ISOLATED:
+			pkt_src_str = "isolated";
+			
             break;
     }
     DEBUG_VALIDATE_BUG_ON(pkt_src_str == NULL);

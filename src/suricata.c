@@ -107,6 +107,7 @@
 #include "source-dpdk.h"
 #include "source-windivert.h"
 #include "source-windivert-prototypes.h"
+#include "source-isolated.h"
 
 #include "unix-manager.h"
 
@@ -171,6 +172,7 @@ SC_ATOMIC_DECLARE(unsigned int, engine_stage);
 
 /** suricata engine control flags */
 volatile uint8_t suricata_ctl_flags = 0;
+uint8_t suricata_runing = 0;
 
 /** Run mode selected */
 int run_mode = RUNMODE_UNKNOWN;
@@ -945,6 +947,9 @@ void RegisterAllModules(void)
     /* Dpdk */
     TmModuleReceiveDPDKRegister();
     TmModuleDecodeDPDKRegister();
+
+	/* Isolated */
+	TmModuleDecodeIsolatedRegister();
 }
 
 static TmEcode LoadYamlConfig(SCInstance *suri)
@@ -1334,6 +1339,7 @@ static TmEcode ParseCommandLine(int argc, char** argv, SCInstance *suri)
 #ifdef HAVE_DPDK
         {"dpdk", 0, 0, 0},
 #endif
+        {"isolated", 0, 0, 0},
         {"af-packet", optional_argument, 0, 0},
         {"af-xdp", optional_argument, 0, 0},
         {"netmap", optional_argument, 0, 0},
@@ -1461,7 +1467,11 @@ static TmEcode ParseCommandLine(int argc, char** argv, SCInstance *suri)
                 if (ParseCommandLineDpdk(suri, optarg) != TM_ECODE_OK) {
                     return TM_ECODE_FAILED;
                 }
-            } else if (strcmp((long_opts[option_index]).name, "af-packet") == 0) {
+            } else if (strcmp((long_opts[option_index]).name, "isolated") == 0) {
+            	if (suri->run_mode == RUNMODE_UNKNOWN) {
+					suri->run_mode = RUNMODE_ISOLATED;
+				}
+			} else if (strcmp((long_opts[option_index]).name, "af-packet") == 0) {
                 if (ParseCommandLineAfpacket(suri, optarg) != TM_ECODE_OK) {
                     return TM_ECODE_FAILED;
                 }
@@ -1697,6 +1707,7 @@ static TmEcode ParseCommandLine(int argc, char** argv, SCInstance *suri)
                 return TM_ECODE_FAILED;
 #endif /* WINDIVERT */
             } else if(strcmp((long_opts[option_index]).name, "reject-dev") == 0) {
+#ifndef HAVE_ISOLATED
 #ifdef HAVE_LIBNET11
                 BUG_ON(optarg == NULL); /* for static analysis */
                 extern char *g_reject_dev;
@@ -1709,6 +1720,9 @@ static TmEcode ParseCommandLine(int argc, char** argv, SCInstance *suri)
 #else
                 SCLogError("Libnet 1.1 support not enabled. Compile Suricata with libnet support.");
                 return TM_ECODE_FAILED;
+#endif
+#else
+				return TM_ECODE_FAILED;
 #endif
             }
             else if (strcmp((long_opts[option_index]).name, "set") == 0) {
@@ -2807,6 +2821,10 @@ static void SuricataMainLoop(SCInstance *suri)
             break;
         }
 
+		if (suricata_runing == 0) {
+			suricata_runing = 1;
+		}
+
         TmThreadCheckThreadState();
 
         if (sighup_count > 0) {
@@ -2846,7 +2864,11 @@ int InitGlobal(void)
     /* initialize the logging subsys */
     SCLogInitLogModule(NULL);
 
+#ifndef HAVE_ISOLATED
     SCSetThreadName("Suricata-Main");
+#else
+	SCSetThreadName("isolated");
+#endif
 
     /* Ignore SIGUSR2 as early as possible. We redeclare interest
      * once we're done launching threads. The goal is to either die
@@ -2872,6 +2894,11 @@ int InitGlobal(void)
     memset(tmm_modules, 0, TMM_SIZE * sizeof(TmModule));
 
     return 0;
+}
+
+int SuricatRuning(void)
+{
+	return suricata_runing;
 }
 
 int SuricataMain(int argc, char **argv)
@@ -2950,7 +2977,6 @@ int SuricataMain(int argc, char **argv)
     }
 
     SCDropMainThreadCaps(suricata.userid, suricata.groupid);
-
     /* Re-enable coredumps after privileges are dropped. */
     CoredumpEnable();
 

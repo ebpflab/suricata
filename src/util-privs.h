@@ -33,6 +33,7 @@
 #define SC_CAP_NET_BIND_SERVICE 0x40
 #define SC_CAP_NET_BROADCAST    0x80
 
+#ifndef HAVE_ISOLATED
 #ifdef HAVE_LIBCAP_NG
 #include <cap-ng.h>
 #include "threadvars.h"
@@ -89,6 +90,10 @@ void SCDropMainThreadCaps(uint32_t , uint32_t );
 #define SCDropCaps(...)
 #define SCDropMainThreadCaps(...)
 #endif /* HAVE_LIBCAP_NG */
+#else
+#define SCDropCaps(...)
+#define SCDropMainThreadCaps(...)
+#endif /* HAVE_ISOLATED */
 
 void SCGetUserID(const char *, const char *, uint32_t *, uint32_t *);
 void SCGetGroupID(const char *, uint32_t *);

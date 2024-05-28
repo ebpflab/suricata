@@ -51,6 +51,7 @@
 #include "runmode-pfring.h"
 #include "runmode-unix-socket.h"
 #include "runmode-windivert.h"
+#include "runmode-isolated.h"
 #include "util-unittest.h"
 #include "util-misc.h"
 #include "util-plugin.h"
@@ -182,6 +183,8 @@ static const char *RunModeTranslateModeToName(int runmode)
 #else
             return "DPDK(DISABLED)";
 #endif
+        case RUNMODE_ISOLATED:
+			return "ISOLATED";
 
         default:
             FatalError("Unknown runtime mode. Aborting");
@@ -255,7 +258,8 @@ void RunModeRegisterRunModes(void)
     RunModeIdsNflogRegister();
     RunModeUnixSocketRegister();
     RunModeIpsWinDivertRegister();
-    RunModeDpdkRegister();
+    RunModeDpdkRegister();	
+    RunModeIsolatedRegister();
 #ifdef UNITTESTS
     UtRunModeRegister();
 #endif
@@ -379,6 +383,9 @@ static const char *RunModeGetConfOrDefault(int capture_mode, const char *capture
                 custom_mode = RunModeDpdkGetDefaultMode();
                 break;
 #endif
+            case RUNMODE_ISOLATED:
+                custom_mode = RunModeIsolatedGetDefaultMode();
+                break;
             default:
                 return NULL;
         }
@@ -463,7 +470,7 @@ void RunModeDispatch(int runmode, const char *custom_mode, const char *capture_p
     /* Check if the alloted queues have at least 1 reader and writer */
     TmValidateQueueState();
 
-    if (runmode != RUNMODE_UNIX_SOCKET) {
+    if (runmode != RUNMODE_UNIX_SOCKET /*&& runmode != RUNMODE_ISOLATED*/) {
         /* spawn management threads */
         FlowManagerThreadSpawn();
         FlowRecyclerThreadSpawn();

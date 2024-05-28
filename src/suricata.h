@@ -67,7 +67,11 @@
 #include "suricata-common.h"
 
 /* the name of our binary */
+#ifndef HAVE_ISOLATED
 #define PROG_NAME "Suricata"
+#else
+#define PROG_NAME "eDPI"
+#endif
 #define PROG_VER PACKAGE_VERSION
 
 /* workaround SPlint error (don't know __gnuc_va_list) */
@@ -200,6 +204,7 @@ void PreRunInit(const int runmode);
 void PreRunPostPrivsDropInit(const int runmode);
 void PostRunDeinit(const int runmode, struct timeval *start_time);
 void RegisterAllModules(void);
+int SuricatRuning(void);
 
 const char *GetProgramVersion(void);
 

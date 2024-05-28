@@ -48,6 +48,8 @@ int32_t CoredumpLoadConfig(void) {
 
 #else
 
+#ifndef HAVE_ISOLATED
+
 static bool unlimited = false;
 static rlim_t max_dump = 0;
 
@@ -238,5 +240,18 @@ int32_t CoredumpLoadConfig (void)
 #endif /* HAVE_SYS_RESOURCE_H */
     return 0;
 }
+
+#else
+
+void CoredumpEnable(void) {
+}
+
+int32_t CoredumpLoadConfig(void) {
+    /* todo: use the registry to get/set dump configuration */
+    //SCLogInfo("Configuring core dump is not yet supported on Windows.");
+    return 0;
+}
+
+#endif /* HAVE_ISOLATED */
 
 #endif /* OS_WIN32 */

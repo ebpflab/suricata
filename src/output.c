@@ -1079,12 +1079,13 @@ void OutputRegisterLoggers(void)
 
     JsonAlertLogRegister();
     JsonAnomalyLogRegister();
-    /* flow/netflow */
+#ifndef HAVE_ISOLATED
+	/* flow/netflow */
     JsonFlowLogRegister();
     JsonNetFlowLogRegister();
     /* json stats */
     JsonStatsLogRegister();
-
+#endif
     /* DNP3. */
     JsonDNP3LogRegister();
     JsonMetadataLogRegister();

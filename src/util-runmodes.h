@@ -27,6 +27,11 @@ typedef void *(*ConfigIfaceParserFunc) (const char *);
 typedef void *(*ConfigIPSParserFunc) (int);
 typedef int (*ConfigIfaceThreadsCountFunc) (void *);
 
+ThreadVars *RunModeIsolatedThreadVars(void);
+
+typedef void *(*ConfigIsolatedParserFunc) (const char *);
+
+
 int RunModeSetLiveCaptureAuto(ConfigIfaceParserFunc configparser,
                               ConfigIfaceThreadsCountFunc ModThreadsCount,
                               const char *recv_mod_name,
@@ -58,5 +63,9 @@ int RunModeSetIPSWorker(ConfigIPSParserFunc ConfigParser,
                         const char *decode_mod_name);
 
 char *RunmodeAutoFpCreatePickupQueuesString(int n);
+
+int RunModeSetIsolatedWorkers(ConfigIsolatedParserFunc ConfigParser,
+        ConfigIfaceThreadsCountFunc ModThreadsCount, const char *recv_mod_name,
+        const char *decode_mod_name, const char *thread_name, const char *live_dev);
 
 #endif /* __UTIL_RUNMODES_H__ */

@@ -68,6 +68,9 @@ static int PacketPoolIsEmpty(PktPool *pool)
 
 void PacketPoolWait(void)
 {
+#ifdef HAVE_ISOLATED
+	return ;
+#endif
     PktPool *my_pool = GetThreadPacketPool();
 
     if (PacketPoolIsEmpty(my_pool)) {

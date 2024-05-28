@@ -33,6 +33,7 @@
 #include "util-privs.h"
 #include "util-byte.h"
 
+#ifndef HAVE_ISOLATED
 #ifdef HAVE_LIBCAP_NG
 
 #include <cap-ng.h>
@@ -137,6 +138,7 @@ void SCDropCaps(ThreadVars *tv)
 }
 
 #endif /* HAVE_LIBCAP_NG */
+#endif /* HAVE_ISOLATED */
 
 /**
  * \brief   Function to get the user and group ID from the specified user name

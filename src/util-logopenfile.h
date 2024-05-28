@@ -33,6 +33,10 @@
 #include "util-log-redis.h"
 #endif /* HAVE_LIBHIREDIS */
 
+#ifdef HAVE_LIBRDKAFKA
+#include "util-log-kafka.h"
+#endif /* HAVE_LIBRDKAFKA */
+
 #include "suricata-plugin.h"
 
 enum LogFileType {
@@ -41,6 +45,7 @@ enum LogFileType {
     LOGFILE_TYPE_UNIX_STREAM,
     LOGFILE_TYPE_REDIS,
     LOGFILE_TYPE_PLUGIN,
+    LOGFILE_TYPE_KAFKA,
     LOGFILE_TYPE_NOTSET
 };
 
@@ -75,12 +80,18 @@ typedef struct LogFileCtx_ {
 #ifdef HAVE_LIBHIREDIS
         void *redis;
 #endif
+#ifdef HAVE_LIBRDKAFKA
+		void *kafka;
+#endif
     };
     LogThreadedFileCtx *threads;
 
     union {
 #ifdef HAVE_LIBHIREDIS
         RedisSetup redis_setup;
+#endif
+#ifdef HAVE_LIBRDKAFKA
+		KafkaSetup kafka_setup;
 #endif
     };
 

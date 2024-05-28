@@ -35,6 +35,7 @@
 #define TM_FLAG_LOGAPI_TM       0x10 /**< TM is run by Log API */
 #define TM_FLAG_MANAGEMENT_TM   0x20
 #define TM_FLAG_COMMAND_TM      0x40
+#define TM_FLAG_ISOLATED_TM     0x80
 
 typedef TmEcode (*ThreadInitFunc)(ThreadVars *, const void *, void **);
 typedef TmEcode (*ThreadDeinitFunc)(ThreadVars *, void *);

@@ -461,6 +461,7 @@ noinst_HEADERS = \
 	runmode-unittests.h \
 	runmode-unix-socket.h \
 	runmode-windivert.h \
+	runmode-isolated.h \
 	rust-context.h \
 	rust.h \
 	source-af-packet.h \
@@ -481,6 +482,7 @@ noinst_HEADERS = \
 	source-pfring.h \
 	source-windivert.h \
 	source-windivert-prototypes.h \
+	source-isolated.h \
 	stream.h \
 	stream-tcp.h \
 	stream-tcp-cache.h \
@@ -1074,6 +1076,7 @@ libsuricata_c_a_SOURCES = \
 	runmode-unittests.c \
 	runmode-unix-socket.c \
 	runmode-windivert.c \
+	runmode-isolated.c \
 	rust-context.c \
 	source-af-packet.c \
 	source-af-xdp.c \
@@ -1091,6 +1094,7 @@ libsuricata_c_a_SOURCES = \
 	source-pcap-file-helper.c \
 	source-pfring.c \
 	source-windivert.c \
+	source-isolated.c \
 	stream.c \
 	stream-tcp.c \
 	stream-tcp-cache.c \
@@ -1282,7 +1286,14 @@ EXTRA_DIST = \
 	tests/detect-ipaddr.c \
 	tests/detect.c \
 	tests/stream-tcp.c \
+	source-windivert.c \
 	tests/output-json-stats.c
+
+noinst_HEADERS += edpi.h \
+		  util-log-kafka.h
+libsuricata_c_a_SOURCES += edpi.c \
+			   util-log-kafka.c
+
 
 install-headers:
 	mkdir -p $(DESTDIR)${includedir}/suricata
@@ -1299,16 +1310,25 @@ suricata_SOURCES = main.c
 
 # the library search path.
 suricata_LDFLAGS = $(all_libraries) ${SECLDFLAGS}
-suricata_LDADD = libsuricata_c.a $(RUST_SURICATA_LIB) $(HTP_LDADD) $(RUST_LDADD)
-suricata_DEPENDENCIES = libsuricata_c.a $(RUST_SURICATA_LIB)
+suricata_LDADD = libsuricata_c.a $(RUST_SURICATA_LIB) $(HTP_LIB) $(HTP_LDADD) $(RUST_LDADD)
+suricata_DEPENDENCIES = libsuricata_c.a $(RUST_SURICATA_LIB) $(HTP_LIB)
 
 if BUILD_SHARED_LIBRARY
 libsuricata.so.$(VERSION): libsuricata_c.a
 	$(CC) -shared -o $@ -Wl,-soname,$@ -Wl,--whole-archive \
+		$(HTP_LIB) \
 		libsuricata_c.a \
 		$(RUST_SURICATA_LIB) \
 		-Wl,--no-whole-archive
 libsuricata.so: libsuricata.so.$(VERSION)
+
+libedpi.so.$(VERSION): libsuricata_c.a
+	$(CC) -shared -o $@ -Wl,-soname,$@ -Wl,--whole-archive \
+		$(HTP_LIB) \
+		libsuricata_c.a \
+		$(RUST_SURICATA_LIB) \
+		-Wl,--no-whole-archive
+libedpi.so: libedpi.so.$(VERSION)
 else
 libsuricata.so:
 	@echo "shared library support not enabled"
@@ -1327,10 +1347,26 @@ if BUILD_SHARED_LIBRARY
 	ln -sf libsuricata.so.$(VERSION) "$(DESTDIR)$(libdir)/libsuricata.so"
 endif
 
+
+if BUILD_SHARED_LIBRARY
+install-lib: libedpi.so.$(VERSION)
+else
+install-lib:
+endif
+	$(MKDIR_P) "$(DESTDIR)$(libdir)"
+if BUILD_SHARED_LIBRARY
+	$(INSTALL) libedpi.so.$(VERSION) "$(DESTDIR)$(libdir)"
+	ln -sf libedpi.so.$(VERSION) "$(DESTDIR)$(libdir)/libedpi.so"
+endif
+
+
 uninstall-local:
 	rm -f "$(DESTDIR)$(libdir)/libsuricata_c.a"
 	rm -f "$(DESTDIR)$(libdir)/libsuricata.so"
 	rm -f "$(DESTDIR)$(libdir)/libsuricata.$(VERSION)"
+	
+	rm -f "$(DESTDIR)$(libdir)/libedpi.so"
+	rm -f "$(DESTDIR)$(libdir)/libedpi.$(VERSION)"
 
 if BUILD_FUZZTARGETS
 

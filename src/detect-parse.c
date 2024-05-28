@@ -1181,6 +1181,7 @@ static int SigParsePort(const DetectEngineCtx *de_ctx,
  */
 static int SigParseActionRejectValidate(const char *action)
 {
+#ifndef HAVE_ISOLATED
 #ifdef HAVE_LIBNET11
 #if defined HAVE_LIBCAP_NG && !defined HAVE_LIBNET_CAPABILITIES
     if (sc_set_caps == TRUE) {
@@ -1195,6 +1196,9 @@ static int SigParseActionRejectValidate(const char *action)
                "required for action \"%s\" but is not compiled into Suricata",
             action);
     return 0;
+#endif
+#else
+	return 0;
 #endif
     return 1;
 }

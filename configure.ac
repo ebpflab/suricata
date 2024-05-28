@@ -1,4 +1,4 @@
-    AC_INIT([suricata],[7.0.5])
+    AC_INIT([suricata],[1.0.1])
     m4_ifndef([AM_SILENT_RULES], [m4_define([AM_SILENT_RULES],[])])AM_SILENT_RULES([yes])
     AC_CONFIG_HEADERS([src/autoconf.h])
     AC_CONFIG_SRCDIR([src/suricata.c])
@@ -697,6 +697,40 @@
         fi
     fi
     AS_IF([test "x$enable_hyperscan" = "xyes"], [AC_DEFINE([BUILD_HYPERSCAN], [1], [Intel Hyperscan support enabled])])
+
+# librdkafka
+    AC_ARG_ENABLE(rdkafka,
+                AS_HELP_STRING([--enable-rdkafka],[Enable Kafka support [default=no]]),
+                [ enable_rdkafka="yes"],
+                [ enable_rdkafka="no"])
+
+    if test "$enable_rdkafka" = "yes"; then
+        AC_CHECK_HEADER("librdkafka/rdkafka.h",RDKAFKA="yes",RDKAFKA="no")
+        if test "$RDKAFKA" = "yes"; then
+            AC_CHECK_LIB(rdkafka, rd_kafka_new,, RDKAFKA="no")
+        fi
+        if test "$RDKAFKA" = "no"; then
+            echo
+            echo "   ERROR!  librdkafka library not found, go get it"
+            echo "   from https://github.com/edenhill/librdkafka or your distribution:"
+            exit 1
+        fi
+        if test "$RDKAFKA" = "yes"; then
+            AC_DEFINE([HAVE_LIBRDKAFKA],[1],[librdkafka available])
+                        enable_rdkafka="yes"
+       fi
+    fi
+
+# isolated
+    AC_ARG_ENABLE(isolated,
+                AS_HELP_STRING([--enable-isolated],[Enable isolated support [default=no]]),
+                [ enable_isolated="yes"],
+                [ enable_isolated="no"])
+
+    if test "$enable_isolated" = "yes"; then
+	AC_DEFINE([HAVE_ISOLATED],[1],[isolated available])
+              	enable_isolated="yes"
+    fi
 
   # libyaml
     AC_ARG_WITH(libyaml_includes,
@@ -1605,8 +1639,11 @@
             AC_CONFIG_SUBDIRS([libhtp])
             HTP_DIR="libhtp"
             AC_SUBST(HTP_DIR)
+	    HTP_LIBNAME="libhtp.a"
             HTP_LDADD="../libhtp/htp/libhtp.la"
+	    HTP_LIB="../${HTP_DIR}/htp/.libs/${HTP_LIBNAME}"
             AC_SUBST(HTP_LDADD)
+            AC_SUBST(HTP_LIB)
             # make sure libhtp is added to the includes
             CPPFLAGS="-I\${srcdir}/../libhtp/ ${CPPFLAGS}"
 
@@ -2612,6 +2649,7 @@ AC_SUBST(MAJOR_MINOR)
 AC_SUBST(RUST_FEATURES)
 AC_SUBST(RUST_SURICATA_LIBDIR)
 AC_SUBST(RUST_SURICATA_LIBNAME)
+AC_SUBST(HTP_LIBNAME)
 AC_SUBST(enable_non_bundled_htp)
 
 AM_CONDITIONAL([BUILD_SHARED_LIBRARY], [test "x$enable_shared" = "xyes"] && [test "x$can_build_shared_library" = "xyes"])
@@ -2657,6 +2695,8 @@ SURICATA_BUILD_CONF="Suricata Configuration:
   Libnet support:                          ${enable_libnet}
   liblz4 support:                          ${enable_liblz4}
   Landlock support:                        ${enable_landlock}
+  rdkafka support:                         ${enable_rdkafka}
+  isolated support:                        ${enable_isolated}
 
   Rust support:                            ${enable_rust}
   Rust strict mode:                        ${enable_rust_strict}

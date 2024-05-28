@@ -48,6 +48,8 @@
 #include "respond-reject-libnet11.h"
 #include "util-device.h"
 
+#ifndef HAVE_ISOLATED
+
 #ifdef HAVE_LIBNET11
 
 #ifndef HAVE_LIBNET_INIT_CONST
@@ -607,3 +609,30 @@ void FreeCachedCtx(void)
 }
 
 #endif /* HAVE_LIBNET11 */
+#else
+int RejectSendLibnet11IPv4TCP(ThreadVars *tv, Packet *p, void *data, enum RejectDirection dir)
+{
+    return 0;
+}
+
+int RejectSendLibnet11IPv4ICMP(ThreadVars *tv, Packet *p, void *data, enum RejectDirection dir)
+{
+    return 0;
+}
+
+int RejectSendLibnet11IPv6TCP(ThreadVars *tv, Packet *p, void *data, enum RejectDirection dir)
+{
+    return 0;
+}
+
+int RejectSendLibnet11IPv6ICMP(ThreadVars *tv, Packet *p, void *data, enum RejectDirection dir)
+{
+    return 0;
+}
+
+void FreeCachedCtx(void)
+{
+}
+
+#endif /* HAVE_ISOLATED */
+

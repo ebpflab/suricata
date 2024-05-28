@@ -48,6 +48,15 @@
 
 #include "flow-hash.h"
 
+//static thread_local 
+static ThreadVars *IsolatedThreadVars = NULL;
+
+ThreadVars *RunModeIsolatedThreadVars(void)
+{
+	return IsolatedThreadVars;
+}
+
+
 /** \brief create a queue string for autofp to pass to
  *         the flow queue handler.
  *
@@ -568,6 +577,87 @@ int RunModeSetIPSWorker(ConfigIPSParserFunc ConfigParser,
         if (TmThreadSpawn(tv) != TM_ECODE_OK) {
             FatalError("TmThreadSpawn failed");
         }
+    }
+
+    return 0;
+}
+
+int RunModeSetIsolatedWorkers(ConfigIsolatedParserFunc ConfigParser,
+        ConfigIfaceThreadsCountFunc ModThreadsCount, const char *recv_mod_name,
+        const char *decode_mod_name, const char *thread_name, const char *live_dev)
+{
+    int nlive = LiveGetDeviceCount();
+    void *aconf;
+    int ldev;
+    int threads_count = 1;
+	unsigned char single_mode = 1;
+
+	aconf = ConfigParser("isolated");
+
+    /* create the threads */
+    for (int thread = 0; thread < threads_count; thread++) {
+        char tname[TM_THREAD_NAME_MAX];
+        TmModule *tm_module = NULL;
+        const char *visual_devname = "isolated";
+        char *printable_threadname = SCMalloc(sizeof(char) * (strlen(thread_name)+5+strlen(visual_devname)));
+        if (unlikely(printable_threadname == NULL)) {
+            FatalError("failed to alloc printable thread name: %s", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+
+        if (single_mode) {
+            snprintf(tname, sizeof(tname), "%s#01-%s", thread_name, visual_devname);
+            snprintf(printable_threadname, strlen(thread_name)+5+strlen(live_dev), "%s#01-%s",
+                     thread_name, live_dev);
+        } else {
+            snprintf(tname, sizeof(tname), "%s#%02d-%s", thread_name,
+                     thread+1, visual_devname);
+            snprintf(printable_threadname, strlen(thread_name)+5+strlen(live_dev), "%s#%02d-%s",
+                     thread_name, thread+1, live_dev);
+        }
+        ThreadVars *tv = TmThreadCreatePacketHandler(tname,
+                "packetpool", "packetpool",
+                "packetpool", "packetpool",
+                "pktacqloop");
+        if (tv == NULL) {
+            FatalError("TmThreadsCreate failed");
+        }
+        tv->printable_name = printable_threadname;
+#if 0
+        tm_module = TmModuleGetByName(recv_mod_name);
+        if (tm_module == NULL) {
+            FatalError("TmModuleGetByName failed for %s", recv_mod_name);
+        }
+        TmSlotSetFuncAppend(tv, tm_module, aconf);
+#endif
+        tm_module = TmModuleGetByName(decode_mod_name);
+        if (tm_module == NULL) {
+            FatalError("TmModuleGetByName %s failed", decode_mod_name);
+        }
+        TmSlotSetFuncAppend(tv, tm_module, NULL);
+
+        tm_module = TmModuleGetByName("FlowWorker");
+        if (tm_module == NULL) {
+            FatalError("TmModuleGetByName for FlowWorker failed");
+        }
+        TmSlotSetFuncAppend(tv, tm_module, NULL);
+
+        tm_module = TmModuleGetByName("RespondReject");
+        if (tm_module == NULL) {
+            FatalError("TmModuleGetByName RespondReject failed");
+        }
+        TmSlotSetFuncAppend(tv, tm_module, NULL);
+
+        TmThreadSetCPU(tv, WORKER_CPU_SET);
+
+		tv->tmm_flags |= TM_FLAG_ISOLATED_TM;
+
+		IsolatedThreadVars = tv;
+#if 1
+        if (TmThreadSpawn(tv) != TM_ECODE_OK) {
+            FatalError("TmThreadSpawn failed");
+        }
+#endif		
     }
 
     return 0;

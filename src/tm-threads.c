@@ -307,7 +307,10 @@ static void *TmThreadsSlotPktAcqLoop(void *td)
     StatsSetupPrivate(tv);
 
     TmThreadsSetFlag(tv, THV_INIT_DONE);
-
+	
+#ifdef HAVE_ISOLATED
+    TmThreadsSetFlag(tv, THV_INIT_DONE | THV_RUNNING);
+#else
     while(run) {
         if (TmThreadsCheckFlag(tv, THV_PAUSE)) {
             TmThreadsSetFlag(tv, THV_PAUSED);
@@ -328,6 +331,7 @@ static void *TmThreadsSlotPktAcqLoop(void *td)
             run = 0;
         }
     }
+
     StatsSyncCounters(tv);
 
     TmThreadsSetFlag(tv, THV_FLOW_LOOP);
@@ -358,6 +362,7 @@ static void *TmThreadsSlotPktAcqLoop(void *td)
     SCLogDebug("%s ending", tv->name);
     TmThreadsSetFlag(tv, THV_CLOSED);
     pthread_exit((void *) 0);
+#endif	
     return NULL;
 
 error:
@@ -1679,12 +1684,16 @@ TmEcode TmThreadSpawn(ThreadVars *tv)
                     threading_set_stack_size);
         }
     }
-
-    int rc = pthread_create(&tv->t, &attr, tv->tm_func, (void *)tv);
-    if (rc) {
-        FatalError("Unable to create thread with pthread_create(): retval %d: %s", rc,
-                strerror(errno));
-    }
+	int rc = 0;
+	if (tv->tmm_flags & TM_FLAG_ISOLATED_TM) {
+		tv->tm_func(tv);
+	} else {
+	    rc = pthread_create(&tv->t, &attr, tv->tm_func, (void *)tv);
+		if (rc) {
+	        FatalError("Unable to create thread with pthread_create(): retval %d: %s", rc,
+	                strerror(errno));
+	    }
+	}
 
 #if DEBUG && HAVE_PTHREAD_GETATTR_NP
     if (threading_set_stack_size) {

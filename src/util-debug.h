@@ -203,8 +203,11 @@ typedef struct SCLogConfig_ {
 
 /* Module and thread tagging */
 /* The module name, usually the containing source-module name */
+#ifndef HAVE_ISOLATED
 static const char *_sc_module __attribute__((unused)) = __SCFILENAME__;
-
+#else
+static const char *_sc_module = "edpi";
+#endif
 extern SCLogLevel sc_log_global_log_level;
 
 extern int sc_log_module_initialized;

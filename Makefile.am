@@ -63,5 +63,9 @@ install-library:
 	cd rust && $(MAKE) $@
 	$(INSTALL) libsuricata-config "$(DESTDIR)$(bindir)/libsuricata-config"
 
+install-lib:
+	cd src && $(MAKE) $@
+	$(INSTALL) libsuricata-config "$(DESTDIR)$(bindir)/libsuricata-config"
+
 install-headers:
 	cd src && $(MAKE) $@

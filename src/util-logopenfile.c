@@ -45,6 +45,10 @@
 #include "util-log-redis.h"
 #endif /* HAVE_LIBHIREDIS */
 
+#ifdef HAVE_LIBRDKAFKA
+#include "util-log-kafka.h"
+#endif /* HAVE_LIBRDKAFKA */
+
 #define LOGFILE_NAME_MAX 255
 
 static bool LogFileNewThreadedCtx(LogFileCtx *parent_ctx, const char *log_path, const char *append,
@@ -934,6 +938,14 @@ int LogFileWrite(LogFileCtx *file_ctx, MemBuffer *buffer)
                 MEMBUFFER_OFFSET(buffer));
         SCMutexUnlock(&file_ctx->fp_mutex);
     }
+#endif
+#ifdef HAVE_LIBRDKAFKA
+		else if (file_ctx->type == LOGFILE_TYPE_KAFKA) {
+			SCMutexLock(&file_ctx->fp_mutex);
+			LogFileWriteKafka(file_ctx, (const char *)MEMBUFFER_BUFFER(buffer),
+					MEMBUFFER_OFFSET(buffer));
+			SCMutexUnlock(&file_ctx->fp_mutex);
+		}
 #endif
 
     return 0;
